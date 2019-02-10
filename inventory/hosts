@@ -1,0 +1,6 @@
+[master]
+kuber-master ansible_host=192.168.1.90
+
+[workers]
+kuber-slave-0 ansible_host=192.168.1.91
+kuber-slave-1 ansible_host=192.168.1.92

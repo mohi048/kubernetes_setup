@@ -1,0 +1,71 @@
+- hosts: all
+  become: yes
+  tasks:
+
+   - name: Turning off Swap space
+     command: swapoff -a
+     tags: bootstrap_base_os
+
+   - name: Updating fstab entries to remove swap space
+     replace:
+       dest: /etc/fstab
+       regexp: '(.*swap.*)'
+       replace: '#\1'
+     tags: bootstrap_base_os
+
+   - name: Updating hosts file entries as per ansible inventory
+     lineinfile:
+       dest: /etc/hosts
+       regexp: '.*{{ item }}$'
+       line: "{{ hostvars[item].ansible_host }} {{item}}"
+       state: present
+     when: hostvars[item].ansible_host is defined
+     with_items: "{{ groups.all }}"
+     tags: bootstrap_base_os
+
+   - name: Install Docker on all nodes
+     apt:
+       name: docker.io
+       state: present
+       update_cache: true
+     tags: install_kubernetes_components
+
+   - name: Allow the use of repositories accessed via the HTTP Secure protocol (HTTPS)
+     apt:
+       name: apt-transport-https
+       state: present
+     tags: install_kubernetes_components
+
+   - name: Import Google Cloud Platform public key
+     apt_key:
+       url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+       state: present
+     tags: install_kubernetes_components
+
+   - name: Update apt repository with kubernetes 
+     apt_repository:
+      repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+      filename: 'kubernetes'
+     tags: install_kubernetes_components
+
+   - name: Install kubelet, primary node-agent that runs on each node. Refer https://kubernetes.io/docs/reference/command-line-tools-reference/kubelet/
+     apt:
+       name: kubelet
+       state: present
+       update_cache: true
+     tags: install_kubernetes_components
+
+   - name: Install kubeadm, tool built to provide kubeadm init and kubeadm join as best-practice fast-paths for creating Kubernetes clusters. Refer https://kubernetes.io/docs/reference/setup-tools/kubeadm/kubeadm/
+     apt:
+       name: kubeadm
+       state: present
+     tags: install_kubernetes_components
+
+
+   - name: Install kubectl on master node, A tool to deploy and manage applications on Kubernetes.you can inspect cluster resources, create, delete, and update components, look at your new cluster; and bring up example apps. Refer https://kubernetes.io/docs/reference/kubectl/overview/ 
+     apt:
+       name: kubectl
+       state: present
+     when: inventory_hostname in groups['master']
+     tags: install_kubernetes_components
