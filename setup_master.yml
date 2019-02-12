@@ -1,0 +1,35 @@
+- hosts: master
+  become: yes
+  tasks:
+
+   - name: Update kubeadm.conf
+     lineinfile:
+       path:  /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+       line: 'Environment="cgroup-driver=systemd/cgroup-driver=cgroupfs"'
+       state: present
+
+#   - name: Initialize kubernetes admin cluster
+#     command: kubeadm init --apiserver-advertise-address="{{ ansible_default_ipv4.address }}" --pod-network-cidr="{{ pod_network_cidr }}"
+
+- hosts: master
+  become: no
+  tasks:
+
+   - name: Create Kubernetes directory in home path
+     file:
+       path: "~/.kube"
+       state: directory
+
+   - name: copy admin.conf in Kubernetes directory
+     copy:
+      src: /etc/kubernetes/admin.conf 
+      dest: "~/.kube/config"
+
+   - name: verify if kubectl is working
+     command: kubectl get pods -o wide --all-namespaces
+
+   - name: install the CALICO pod network
+     command: kubectl apply -f https://docs.projectcalico.org/v3.0/getting-started/kubernetes/installation/hosted/kubeadm/1.7/calico.yaml 
+
+   - name: install v1.10.1 kubernetes-dashboard
+     command: kubectl create -f https://raw.githubusercontent.com/kubernetes/dashboard/v1.10.1/src/deploy/recommended/kubernetes-dashboard.yaml
